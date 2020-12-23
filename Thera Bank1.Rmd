@@ -1,0 +1,424 @@
+
+### Supervised Learning
+```{r}
+#Importing variable transformation
+rm(list=ls())
+ba=read.csv("Bank_Personal_Loan_Modelling.csv")
+str(ba)
+summary(ba)
+library(DataExplorer)
+plot_histogram(ba)
+ba=ba[,-c(1,5)]
+summary(ba)
+sapply(ba, function(x) sum(is.na(x)))
+ba$Personal.Loan=as.factor(ba$Personal.Loan)
+ba$Education=as.factor(ba$Education)
+ba$Family=as.factor(ba$Family)
+ba$Securities.Account=as.factor(ba$Securities.Account)
+ba$CD.Account=as.factor(ba$CD.Account)
+ba$Online=as.factor(ba$Online)
+ba$CreditCard=as.factor(ba$CreditCard)
+ba$Mortgage=ifelse(ba$Mortgage>0,1,0)
+ba$Mortgage=as.factor(ba$Mortgage)
+summary(ba)
+```
+
+## EDA
+```{r}
+library(corrplot)
+corrplot(cor(ba[,1:3,5]),type="upper",method="number")
+ba=ba[,-2]
+summary(ba)
+prop.table(table(ba$Personal.Loan))
+library(ggplot2)
+library(dplyr)
+library(cowplot)
+library(reshape2)
+
+melt <- melt(ba[,c(1,2,4,7)], id = c("Personal.Loan"))
+
+#  box plots
+melt%>%ggplot(aes(Personal.Loan,value))+geom_boxplot(aes(color=Personal.Loan),alpha=0.2)+facet_wrap(.~variable,scales = "free_x",nrow=3)+coord_flip()+ggtitle("Age,Income,CCAvg againts Personal Loan")
+
+a=ba%>%ggplot(aes(Age))+geom_histogram(aes(y=..density..),fill="blue",color="black",alpha=0.2,bins=20)+geom_density(alpha=.2, fill="blue")+ylab("Frequency")+ggtitle("Distribution of Age")+xlab("Age")
+b=ba%>%ggplot(aes(Income))+geom_histogram(aes(y=..density..),fill="red",color="black",alpha=0.2,bins=20)+geom_density(alpha=.2, fill="red")+ylab("Frequency")+ggtitle("Distribution of Income")+xlab("Income")
+c=ba%>%ggplot(aes(CCAvg))+geom_histogram(aes(y=..density..),fill="brown",color="black",alpha=0.2,bins=20)+geom_density(alpha=.2, fill="brown")+ylab("Frequency")+ggtitle("Distribution of CCAvg")+xlab("CCAvg")
+library(moments)
+skewness(ba$Income)
+skewness(ba$CCAvg)
+d=ba%>%ggplot(aes(Age))+stat_boxplot(geom = "errorbar", width = 0.2)+geom_boxplot(fill="blue")+coord_flip()+ggtitle("Age")
+e=ba%>%ggplot(aes(Income))+stat_boxplot(geom = "errorbar", width = 0.2)+geom_boxplot(fill="red")+coord_flip()+ggtitle("Income")
+f=ba%>%ggplot(aes(CCAvg))+stat_boxplot(geom = "errorbar", width = 0.2)+geom_boxplot(fill="brown")+coord_flip()+ggtitle("CCAvg")
+plot_grid(a,b,c,d,e,f)
+ba%>%ggplot(aes(Income))+geom_histogram(bins=10,color="black",fill="blue")+facet_wrap(.~Personal.Loan)+ggtitle("Income vs personal Loan")
+ba%>%ggplot(aes(Family,Income))+geom_boxplot(aes(fill=Personal.Loan))+ggtitle("Family size vs Income against Personal Loan")
+ba%>%group_by(Family,Personal.Loan)%>%summarize(count=n())%>%mutate(p=round((count/length(ba$Personal.Loan)*100),2))%>%ggplot(aes(Family,count,fill=Personal.Loan))+geom_bar(stat="identity",position = position_dodge(width=0.9))+geom_text(aes(x=Family,y=count,label=paste(format(p,nsmall = 0.9),"%")),position = position_dodge(width=1),vjust=-0.25)+ggtitle("Distribution of Family")+xlab("Family")
+ba%>%ggplot(aes(Education,Income))+geom_boxplot(aes(fill=Personal.Loan))+ggtitle("Education vs Income against Personal Loan")
+ba%>%group_by(Education,Personal.Loan)%>%summarize(count=n())%>%mutate(p=round((count/length(ba$Personal.Loan)*100),2))%>%ggplot(aes(Education,count,fill=Personal.Loan))+geom_bar(stat="identity",position = position_dodge(width=0.9))+geom_text(aes(x=Education,y=count,label=paste(format(p,nsmall = 0.9),"%")),position = position_dodge(width=1),vjust=-0.25)+ggtitle("Distribution of Education")+xlab("Education")
+ba%>%ggplot(aes(Online,Income))+geom_boxplot(aes(fill=Personal.Loan))+ggtitle("Online vs Income against Personal Loan")
+ba%>%group_by(Online,Personal.Loan)%>%summarize(count=n())%>%mutate(p=round((count/length(ba$Personal.Loan)*100),2))%>%ggplot(aes(Online,count,fill=Personal.Loan))+geom_bar(stat="identity",position = position_dodge(width=0.9))+geom_text(aes(x=Online,y=count,label=paste(format(p,nsmall = 0.9),"%")),position = position_dodge(width=1),vjust=-0.25)+ggtitle("Distribution of Online")+xlab("Online")
+ba%>%ggplot(aes(CD.Account,Income))+geom_boxplot(aes(fill=Personal.Loan))+ggtitle("CD Account vs Income against Personal Loan")
+ba%>%group_by(CD.Account,Personal.Loan)%>%summarize(count=n())%>%mutate(p=round((count/length(ba$Personal.Loan)*100),2))%>%ggplot(aes(CD.Account,count,fill=Personal.Loan))+geom_bar(stat="identity",position = position_dodge(width=0.9))+geom_text(aes(x=CD.Account,y=count,label=paste(format(p,nsmall = 0.9),"%")),position = position_dodge(width=1),vjust=-0.25)+ggtitle("Distribution of CD Account")+xlab("CD Account")
+ba%>%ggplot(aes(CreditCard,Income))+geom_boxplot(aes(fill=Personal.Loan))+ggtitle("Credit Card vs Income against Personal Loan")
+ba%>%group_by(CreditCard,Personal.Loan)%>%summarize(count=n())%>%mutate(p=round((count/length(ba$Personal.Loan)*100),2))%>%ggplot(aes(CreditCard,count,fill=Personal.Loan))+geom_bar(stat="identity",position = position_dodge(width=0.9))+geom_text(aes(x=CreditCard,y=count,label=paste(format(p,nsmall = 0.9),"%")),position = position_dodge(width=1),vjust=-0.25)+ggtitle("Distribution of Credit Card")+xlab("Credit Card")
+ba%>%ggplot(aes(Securities.Account,Income))+geom_boxplot(aes(fill=Personal.Loan))+ggtitle("Securities Account vs Income against Personal Loan")
+ba%>%group_by(Securities.Account,Personal.Loan)%>%summarize(count=n())%>%mutate(p=round((count/length(ba$Personal.Loan)*100),2))%>%ggplot(aes(Securities.Account,count,fill=Personal.Loan))+geom_bar(stat="identity",position = position_dodge(width=0.9))+geom_text(aes(x=Securities.Account,y=count,label=paste(format(p,nsmall = 0.9),"%")),position = position_dodge(width=1),vjust=-0.25)+ggtitle("Distribution of Securities Account")+xlab("Credit Card")
+ba%>%ggplot(aes(Mortgage,Income))+geom_boxplot(aes(fill=Personal.Loan))+ggtitle("Mortgage vs Income against Personal Loan")
+ba%>%group_by(Mortgage,Personal.Loan)%>%summarize(count=n())%>%mutate(p=round((count/length(ba$Personal.Loan)*100),2))%>%ggplot(aes(Mortgage,count,fill=Personal.Loan))+geom_bar(stat="identity",position = position_dodge(width=0.9))+geom_text(aes(x=Mortgage,y=count,label=paste(format(p,nsmall = 0.9),"%")),position = position_dodge(width=1),vjust=-0.25)+ggtitle("Distribution of Mortgage")+xlab("Mortgage")
+ba%>%ggplot(aes(Family,CCAvg))+geom_boxplot(aes(fill=Personal.Loan))+ggtitle("Family vs CCAvg against Personal Loan")
+ba%>%ggplot(aes(Education,CCAvg))+geom_boxplot(aes(fill=Personal.Loan))+ggtitle("Education vs CCAvg against Personal Loan")
+
+
+
+library(caret)
+lo=glm(Personal.Loan~.,data=ba,family = binomial(link = "logit"))
+summary(lo)
+step(lo,direction = "both")
+l1= glm(formula = Personal.Loan ~+Income + Family + CCAvg + Education + 
+          Securities.Account + CD.Account + Online + CreditCard, family = binomial(link = "logit"), 
+        data = ba)
+summary(l1)
+ba1=dummyVars(" ~ .", data = ba,fullRank = T)
+ba1=data.frame(predict(ba1, newdata = ba))
+ba1$Personal.Loan.1=as.factor(ba1$Personal.Loan.1)
+```
+
+## Logistic Regression
+```{r}
+library(caret)
+library(caTools)
+set.seed(200)
+spl=sample.split(ba1$Personal.Loan,SplitRatio = 0.7)
+train=subset(ba1,spl==T)
+test=subset(ba1,spl==F)
+prop.table(table(train$Personal.Loan))
+
+set.seed(124)
+lo=glm(Personal.Loan.1~.,data=train,family = binomial(link = "logit"))
+summary(lo)
+step(lo,direction = "both")
+
+l1=glm(formula = Personal.Loan.1 ~ Income + Family.3 + Family.4 + 
+      CCAvg + Education.2 + Education.3 + Securities.Account.1 + 
+      CD.Account.1 + Online.1 + CreditCard.1, family = binomial(link = "logit"), 
+    data = train)
+summary(l1)
+library(car)
+vif(l1)
+train$prob=predict(l1,train,type="response")
+train$pred=ifelse(train$prob>0.3,1,0)
+train$pred=as.factor(train$pred)
+caret::confusionMatrix(train$pred,train$Personal.Loan.1,positive = "1")
+
+test$prob=predict(l1,test,type="response")
+test$pred=ifelse(test$prob>0.3,1,0)
+test$pred=as.factor(test$pred)
+caret::confusionMatrix(test$pred,test$Personal.Loan.1,positive = "1")
+
+library(ROCR)
+ROCRpred = prediction(test$prob, test$Personal.Loan.1)
+as.numeric(performance(ROCRpred, "auc")@y.values)
+perf = performance(ROCRpred, "tpr","fpr")
+plot(perf,col="black",lty=2, lwd=2)
+plot(perf,lwd=3,colorize = TRUE)
+plot(perf,colorize=T,print.cutoffs.at=seq(0,1,0.1),text.adj=c(-0.2,1.7),main="ROC for Threshold")
+
+library(blorr)
+blr_step_aic_both(l1, details = FALSE)
+
+#Plot the gains chart
+k <- blr_gains_table(l1)
+plot(k)
+k
+#Kolgomorov-Smirnov
+blr_ks_chart(k, title = "KS Chart",
+             yaxis_title = " ",xaxis_title = "Cumulative Population %",
+             ks_line_color = "black")
+
+#Lift Chart
+blr_decile_lift_chart(k, xaxis_title = "Decile",
+                      yaxis_title = "Decile Mean / Global Mean",
+                      title = "Decile Lift Chart",
+                      bar_color = "blue", text_size = 3.5,
+                      text_vjust = -0.3)
+#Summary of confusion matrix
+blr_confusion_matrix(l1, data = test)
+
+#Gini index
+blr_gini_index(l1, data = test)
+
+ 
+#McFadden R square and adjusted McFaddedn Rsquare to check goodness of fit
+blr_rsq_mcfadden(l1)
+blr_rsq_mcfadden_adj(l1)
+```
+
+## KNN
+```{r}
+ba=read.csv("Bank_Personal_Loan_Modelling.csv")
+str(ba)
+summary(ba)
+library(DataExplorer)
+plot_histogram(ba)
+ba=ba[,-c(1,3,5)]
+summary(ba)
+ba$Personal.Loan=as.factor(ba$Personal.Loan)
+ba$Education=as.factor(ba$Education)
+ba$Family=as.factor(ba$Family)
+ba$Securities.Account=as.factor(ba$Securities.Account)
+ba$CD.Account=as.factor(ba$CD.Account)
+ba$Online=as.factor(ba$Online)
+ba$CreditCard=as.factor(ba$CreditCard)
+ba$Mortgage=ifelse(ba$Mortgage>0,1,0)
+ba$Mortgage=as.factor(ba$Mortgage)
+summary(ba)
+str(ba)
+sc=scale(ba[,c(1,2,4)])
+head(sc)
+sc=as.data.frame(sc)
+ba=cbind(ba,sc)
+ba=ba[,-c(1,2,4)]
+
+library(caret)
+ba1=dummyVars(" ~ .", data = ba,fullRank = F)
+ba1=data.frame(predict(ba1, newdata = ba))
+ba1$Personal.Loan.1=as.factor(ba1$Personal.Loan.1)
+ba1=ba1[,-c(8,10,12,14,16,18)]
+summary(ba1)
+
+library(caTools)
+
+set.seed(200)
+spl=sample.split(ba1$Personal.Loan.1,SplitRatio = 0.7)
+train=subset(ba1,spl==T)
+test=subset(ba1,spl==F)
+set.seed(400)
+ctrl=trainControl(method="cv",number=10)
+knn=train(Personal.Loan.1 ~ ., data = train, method = "knn", trControl = ctrl,tuneGrid = expand.grid(k = c(3,5,7,9)))
+knn
+plot(knn)
+
+train$pred=predict(knn,newdata=train,type="prob")[,"1"]
+train$prob=ifelse(train$pred>0.3,1,0)
+train$prob=as.factor(train$prob)
+caret::confusionMatrix(train$prob,train$Personal.Loan.1,positive = "1")
+
+test$pred=predict(knn,newdata=test,type="prob")[,"1"]
+test$prob=ifelse(test$pred>0.3,1,0)
+test$prob=as.factor(test$prob)
+caret::confusionMatrix(test$prob,test$Personal.Loan.1,positive = "1")
+
+
+library(ROCR)
+ROCRpred = prediction(test$pred, test$Personal.Loan.1)
+as.numeric(performance(ROCRpred, "auc")@y.values)
+perf = performance(ROCRpred, "tpr","fpr")
+plot(perf,col="black",lty=2, lwd=2)
+plot(perf,lwd=3,colorize = TRUE)
+plot(perf,colorize=T,print.cutoffs.at=seq(0,1,0.1),text.adj=c(-0.2,1.7),main="ROC for Threshold")
+
+#Gains charts
+library(gains)
+gain_te=performance(ROCRpred,"tpr","rpp")
+plot(gain_te,col="orange",lwd=2)
+lines(x=c(0,0.5,1),y=c(0,1,1),col="darkgreen",lwd=2)
+
+#kolgormonov-smirnov matrix
+ks_te=max(perf@y.values[[1]]-perf@x.values[[1]])
+plot(perf,main=paste0("KS=",round(ks_te*100,5),"%"))
+lines(x=c(0,1),y=c(0,1))
+
+#gini
+library(ineq)
+ineq(test$pred,"gini")
+
+#concordance
+library(InformationValue)
+Concordance(actuals=test$Personal.Loan.1,predictedScores = test$pred)
+
+#lift chart
+library(lift)
+plotLift(test$pred,test$Personal.Loan.1,cumulative = T)
+```
+
+##Naive Bayes
+```{r}
+ba=read.csv("Bank_Personal_Loan_Modelling.csv")
+str(ba)
+summary(ba)
+library(DataExplorer)
+plot_histogram(ba)
+ba=ba[,-c(1,3,5)]
+summary(ba)
+ba$Personal.Loan=as.factor(ba$Personal.Loan)
+ba$Education=as.factor(ba$Education)
+ba$Family=as.factor(ba$Family)
+ba$Securities.Account=as.factor(ba$Securities.Account)
+ba$CD.Account=as.factor(ba$CD.Account)
+ba$Online=as.factor(ba$Online)
+ba$CreditCard=as.factor(ba$CreditCard)
+ba$Mortgage=ifelse(ba$Mortgage>0,1,0)
+ba$Mortgage=as.factor(ba$Mortgage)
+summary(ba)
+ba$Age_B=cut(ba$Age, breaks = 4, labels = c("1", "2", "3","4"))
+ba$Income_B=cut(ba$Income, breaks = 4, labels = c("1", "2", "3","4"))
+ba$CCAvg_B=cut(ba$CCAvg, breaks = 4, labels = c("1", "2", "3","4"))
+ba=ba[,-c(1,2,4)]
+ba=lapply(ba, function(x) as.factor(x))
+ba=as.data.frame(ba)
+summary(ba)
+
+set.seed(234)
+spl=sample.split(ba$Personal.Loan,SplitRatio = 0.7)
+train=subset(ba,spl==T)
+test=subset(ba,spl==F)
+set.seed(405)
+library(e1071)
+NB=naiveBayes(x=train[,-4],y=train$Personal.Loan)
+train$pred=predict(NB,train,type="raw")[,"1"]
+train$prob=ifelse(train$pred>0.5,1,0)
+train$prob=as.factor(train$prob)
+str(train)
+summary(train)
+caret::confusionMatrix(train$prob,train$Personal.Loan,positive="1")
+
+test$pred=predict(NB,test,type="raw")[,"1"]
+test$prob=ifelse(test$pred>0.5,1,0)
+test$prob=as.factor(test$prob)
+caret::confusionMatrix(test$prob,test$Personal.Loan,positive="1")
+
+
+library(ROCR)
+ROCRpred = prediction(test$pred, test$Personal.Loan)
+as.numeric(performance(ROCRpred, "auc")@y.values)
+perf = performance(ROCRpred, "tpr","fpr")
+plot(perf,col="black",lty=2, lwd=2)
+plot(perf,lwd=3,colorize = TRUE)
+plot(perf,colorize=T,print.cutoffs.at=seq(0,1,0.1),text.adj=c(-0.2,1.7),main="ROC for Threshold")
+
+#Gains charts
+library(gains)
+gain_te=performance(ROCRpred,"tpr","rpp")
+plot(gain_te,col="orange",lwd=2)
+lines(x=c(0,0.5,1),y=c(0,1,1),col="darkgreen",lwd=2)
+
+#kolgormonov-smirnov matrix
+ks_te=max(perf@y.values[[1]]-perf@x.values[[1]])
+plot(perf,main=paste0("KS=",round(ks_te*100,5),"%"))
+lines(x=c(0,1),y=c(0,1))
+
+#gini
+library(ineq)
+ineq(test$pred,"gini")
+
+#concordance
+library(InformationValue)
+Concordance(actuals=test$Personal.Loan,predictedScores = test$pred)
+
+#lift chart
+library(lift)
+plotLift(test$pred,test$Personal.Loan,cumulative = T)
+```
+
+## SVM
+```{r}
+ba=read.csv("Bank_Personal_Loan_Modelling.csv")
+str(ba)
+summary(ba)
+library(DataExplorer)
+plot_histogram(ba)
+ba=ba[,-c(1,3,5)]
+summary(ba)
+ba$Personal.Loan=as.factor(ba$Personal.Loan)
+ba$Education=as.factor(ba$Education)
+ba$Family=as.factor(ba$Family)
+ba$Securities.Account=as.factor(ba$Securities.Account)
+ba$CD.Account=as.factor(ba$CD.Account)
+ba$Online=as.factor(ba$Online)
+ba$CreditCard=as.factor(ba$CreditCard)
+ba$Mortgage=ifelse(ba$Mortgage>0,1,0)
+ba$Mortgage=as.factor(ba$Mortgage)
+summary(ba)
+
+ba1=dummyVars(" ~ .", data = ba,fullRank = F)
+ba1=data.frame(predict(ba1, newdata = ba))
+ba1$Personal.Loan.1=as.factor(ba1$Personal.Loan.1)
+ba1=ba1[,-c(11,13,15,17,19,21)]
+summary(ba1)
+ba=ba1[,-c(1,2,7)]
+ba=lapply(ba, function(x) as.factor(x))
+ba=as.data.frame(ba)
+ba1=cbind(ba1[,c(1,2,7)],ba)
+ba1$Personal.Loan.1=ifelse(ba1$Personal.Loan.1==1,"Pos","neg")
+ba1$Personal.Loan.1=as.factor(ba1$Personal.Loan.1)
+library(caTools)
+library(caret)
+set.seed(2001)
+spl=sample.split(ba1$Personal.Loan.1,SplitRatio = 0.7)
+train=subset(ba1,spl==T)
+test=subset(ba1,spl==F)
+tr=train$Personal.Loan.1
+ts=test$Personal.Loan.1
+tr=as.data.frame(tr)
+ts=as.data.frame(ts)
+tr$tr=ifelse(tr$tr=="Pos",1,0)
+ts$ts=ifelse(ts$ts=="Pos",1,0)
+colnames(tr)[1]="Personal.Loan"
+colnames(ts)[1]="Personal.Loan"
+tr$Personal.Loan=as.factor(tr$Personal.Loan)
+ts$Personal.Loan=as.factor(ts$Personal.Loan)
+
+set.seed(40001)
+ctrl=trainControl(method="cv",number=10,classProbs = T)
+sv=train(Personal.Loan.1~ ., data = train, method = "svmRadial", trControl = ctrl,tunlength=10)
+sv
+plot(sv)
+sv$bestTune
+
+predictedClasses=predict(sv, train )
+train$pred=predict(sv,train,type="prob")[,"Pos"]
+train$prob=ifelse(train$pred>0.5,"Pos","neg")
+train$prob=as.factor(train$prob)
+train$Personal.Loan.1=as.factor(train$Personal.Loan.1)
+caret::confusionMatrix(train$prob,train$Personal.Loan.1,positive="Pos")
+
+test$pred=predict(sv,test,type="prob")[,"Pos"]
+test$prob=ifelse(test$pred>0.5,"Pos","neg")
+test$Personal.Loan.1=as.factor(test$Personal.Loan.1)
+test$prob=as.factor(test$prob)
+caret::confusionMatrix(test$prob,test$Personal.Loan.1,positive="Pos")
+
+
+library(ROCR)
+ROCRpred = prediction(test$pred, test$Personal.Loan.1)
+as.numeric(performance(ROCRpred, "auc")@y.values)
+perf = performance(ROCRpred, "tpr","fpr")
+plot(perf,col="black",lty=2, lwd=2)
+plot(perf,lwd=3,colorize = TRUE)
+plot(perf,colorize=T,print.cutoffs.at=seq(0,1,0.2),text.adj=c(-0.2,1.7),main="ROC for Threshold")
+
+#Gains charts
+library(gains)
+gain_te=performance(ROCRpred,"tpr","rpp")
+plot(gain_te,col="orange",lwd=2)+lines(x=c(0,0.5,1),y=c(0,1,1),col="darkgreen",lwd=2)
+
+#kolgormonov-smirnov matrix
+ks_te=max(perf@y.values[[1]]-perf@x.values[[1]])
+plot(perf,main=paste0("KS=",round(ks_te*100,5),"%"))+lines(x=c(0,1),y=c(0,1))
+
+#gini
+library(ineq)
+ineq(test$pred,"gini")
+
+#concordance
+library(InformationValue)
+Concordance(actuals=ts$Personal.Loan,predictedScores = test$pred)
+
+#lift chart
+library(lift)
+plotLift(test$pred,ts$Personal.Loan,cumulative = T)
+```
+```{r}
+q()
+```
+
