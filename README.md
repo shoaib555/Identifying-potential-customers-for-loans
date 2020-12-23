@@ -16,9 +16,7 @@ e) CCAvg: Average spending on Credit Cards per month
 f) Zip Code: Home Address ZIP Code
 g) Family: Family size of customers
 h) Education: Education level
-  1) Undergrad
-  2) Graduate
-  3) Advanced/Professional
+ 1) Undergrad 2) Graduate 3) Advanced/Professional
 i) Mortgage: Value of house mortgage if any
 j) Personal Loan: Did the customer accept the personal loan offered in the last campaign
 k) Security Account : Does the customer have security account with the bank
